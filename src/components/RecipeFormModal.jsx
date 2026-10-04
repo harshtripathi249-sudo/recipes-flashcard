@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../data/initialRecipes';
 
-const PRESET_IMAGES = [
-  { label: 'Saffron Porcini Risotto', url: '/images/hero-saffron-risotto.jpg' },
-  { label: 'Tandoori Paneer Tikka', url: '/images/paneer-tikka.jpg' },
-  { label: 'Spinach Ricotta Ravioli', url: '/images/spinach-ravioli.jpg' },
-  { label: 'Truffle Tagliatelle', url: '/images/truffle-pasta.jpg' },
-  { label: 'Mediterranean Grain Bowl', url: '/images/grain-bowl.jpg' },
-  { label: 'Butter Croissants & Knots', url: '/images/fresh-pastries.jpg' },
-  { label: 'Fig & Pistachio Tart', url: '/images/seasonal-dessert.jpg' },
-];
 
 export default function RecipeFormModal({
   recipeToEdit,
@@ -22,12 +13,12 @@ export default function RecipeFormModal({
   // Form states
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Gourmet Mains');
-  const [prepTime, setPrepTime] = useState('15 mins');
-  const [cookTime, setCookTime] = useState('25 mins');
-  const [servings, setServings] = useState(4);
-  const [difficulty, setDifficulty] = useState('Easy');
-  const [calories, setCalories] = useState('450 kcal');
-  const [image, setImage] = useState('/images/truffle-pasta.jpg');
+  const [prepTime, setPrepTime] = useState('');
+  const [cookTime, setCookTime] = useState('');
+  const [servings, setServings] = useState('');
+  const [difficulty, setDifficulty] = useState('');
+  const [calories, setCalories] = useState('');
+  const [image, setImage] = useState('');
   const [alt, setAlt] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState(['']);
@@ -42,12 +33,12 @@ export default function RecipeFormModal({
     if (recipeToEdit) {
       setTitle(recipeToEdit.title || '');
       setCategory(recipeToEdit.category || 'Gourmet Mains');
-      setPrepTime(recipeToEdit.prepTime || '15 mins');
-      setCookTime(recipeToEdit.cookTime || '25 mins');
-      setServings(recipeToEdit.servings || 4);
-      setDifficulty(recipeToEdit.difficulty || 'Easy');
+      setPrepTime(recipeToEdit.prepTime || '');
+      setCookTime(recipeToEdit.cookTime || '');
+      setServings(recipeToEdit.servings || '');
+      setDifficulty(recipeToEdit.difficulty || '');
       setCalories(recipeToEdit.calories || '');
-      setImage(recipeToEdit.image || '/images/truffle-pasta.jpg');
+      setImage(recipeToEdit.image || '');
       setAlt(recipeToEdit.alt || '');
       setDescription(recipeToEdit.description || '');
       setIngredients(recipeToEdit.ingredients?.length ? [...recipeToEdit.ingredients] : ['']);
@@ -58,12 +49,12 @@ export default function RecipeFormModal({
       // Reset defaults for new recipe
       setTitle('');
       setCategory('Gourmet Mains');
-      setPrepTime('15 mins');
-      setCookTime('20 mins');
-      setServings(4);
-      setDifficulty('Easy');
-      setCalories('480 kcal');
-      setImage('/images/truffle-pasta.jpg');
+      setPrepTime('');
+      setCookTime('');
+      setServings('');
+      setDifficulty('');
+      setCalories('');
+      setImage('');
       setAlt('');
       setDescription('');
       setIngredients(['']);
@@ -152,13 +143,13 @@ export default function RecipeFormModal({
       id: isEditing ? recipeToEdit.id : `recipe-${Date.now()}`,
       title: title.trim(),
       category,
-      prepTime: prepTime.trim() || '15 mins',
-      cookTime: cookTime.trim() || '20 mins',
-      servings: Number(servings) || 2,
+      prepTime: prepTime.trim(),
+      cookTime: cookTime.trim(),
+      servings: Number(servings) > 0 ? Number(servings) : undefined,
       difficulty,
       calories: calories.trim(),
-      image: image.trim() || '/images/truffle-pasta.jpg',
-      alt: alt.trim() || `${title.trim()} plated dish`,
+      image: image.trim(),
+      alt: alt.trim() || (image.trim() ? title.trim() : ''),
       description: description.trim(),
       ingredients: filteredIngredients,
       instructions: filteredInstructions,
@@ -310,6 +301,7 @@ export default function RecipeFormModal({
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value)}
                 >
+                  <option value="">Not set</option>
                   <option value="Easy">Easy</option>
                   <option value="Intermediate">Intermediate</option>
                   <option value="Advanced">Advanced</option>
@@ -317,48 +309,31 @@ export default function RecipeFormModal({
               </div>
             </div>
 
-            {/* Image Selection Section */}
+            {/* Photo (optional) */}
             <div className="form-group">
-              <label className="form-label">Food Photography Image</label>
-              <div className="preset-images-strip" role="radiogroup" aria-label="Select culinary photograph">
-                {PRESET_IMAGES.map((preset) => (
-                  <button
-                    key={preset.url}
-                    type="button"
-                    role="radio"
-                    aria-checked={image === preset.url}
-                    className={`preset-thumb-btn ${image === preset.url ? 'selected' : ''}`}
-                    onClick={() => {
-                      setImage(preset.url);
-                      if (!alt) setAlt(preset.label);
-                    }}
-                    title={preset.label}
-                  >
-                    <img src={preset.url} alt={preset.label} />
-                    <span className="preset-label">{preset.label}</span>
-                  </button>
-                ))}
-              </div>
-
+              <label className="form-label" htmlFor="recipe-image-url">Photo (optional)</label>
+              <span className="form-hint">
+                Paste a link to a photo you have the right to use. Without one, Savoria shows a plain placeholder.
+              </span>
               <div className="form-grid-2 custom-image-row">
                 <div>
-                  <label htmlFor="recipe-image-url" className="form-sublabel">Or enter custom image URL:</label>
+                  <label htmlFor="recipe-image-url" className="form-sublabel">Image URL</label>
                   <input
                     id="recipe-image-url"
-                    type="text"
+                    type="url"
                     className="form-input"
-                    placeholder="/images/truffle-pasta.jpg or https://..."
+                    placeholder="https://..."
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label htmlFor="recipe-image-alt" className="form-sublabel">Image descriptive alt text:</label>
+                  <label htmlFor="recipe-image-alt" className="form-sublabel">Alt text (describe the photo)</label>
                   <input
                     id="recipe-image-alt"
                     type="text"
                     className="form-input"
-                    placeholder="Descriptive text for accessibility"
+                    placeholder="e.g. Bowl of lentil soup with parsley"
                     value={alt}
                     onChange={(e) => setAlt(e.target.value)}
                   />

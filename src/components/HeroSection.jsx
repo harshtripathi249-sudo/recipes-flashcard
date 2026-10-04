@@ -1,52 +1,105 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import RecipePhoto from './RecipePhoto';
 
-// Curated interactive ingredient metadata for the centerpiece dish
-const INGREDIENT_CHIPS = [
-  {
-    id: 'saffron',
-    name: 'Kashmiri Saffron',
-    icon: '✨',
-    positionClass: 'chip-top-left',
-    note: 'Steeped golden threads imparting floral warmth and brilliant color.'
-  },
-  {
-    id: 'porcini',
-    name: 'Wild Porcini',
-    icon: '🍄',
-    positionClass: 'chip-top-right',
-    note: 'Pan-caramelized in European butter for deep earthy umami.'
-  },
-  {
-    id: 'rice',
-    name: 'Carnaroli Rice',
-    icon: '🌾',
-    positionClass: 'chip-bottom-left',
-    note: 'Slow-simmered all’onda to achieve a silky, velvety texture.'
-  },
-  {
-    id: 'sage',
-    name: 'Crispy Sage',
-    icon: '🌿',
-    positionClass: 'chip-bottom-right',
-    note: 'Flash-fried in brown butter for an aromatic herbal crunch.'
-  },
-  {
-    id: 'parmesan',
-    name: 'Aged Parmigiano',
-    icon: '🧀',
-    positionClass: 'chip-bottom-center',
-    note: '24-month aged microplane shavings beaten in off the heat.'
-  }
+const BROWSE_CATEGORIES = [
+  { id: 'All', label: 'All recipes' },
+  { id: 'Artisanal Pastas', label: 'Pastas' },
+  { id: 'Grain Bowls', label: 'Grain bowls' },
+  { id: 'Gourmet Mains', label: 'Mains' },
+  { id: 'Breakfast & Pastries', label: 'Breakfast & pastries' },
+  { id: 'Seasonal Desserts', label: 'Desserts' }
 ];
 
-const CUISINE_QUICK_FILTERS = [
-  { id: 'All', label: 'All Recipes', icon: '🍽' },
-  { id: 'Artisanal Pastas', label: 'Artisanal Pastas', icon: '🍝' },
-  { id: 'Grain Bowls', label: 'Grain Bowls', icon: '🥗' },
-  { id: 'Gourmet Mains', label: 'Gourmet Mains', icon: '🔥' },
-  { id: 'Breakfast & Pastries', label: 'Breakfast & Pastries', icon: '🥐' },
-  { id: 'Seasonal Desserts', label: 'Seasonal Desserts', icon: '🥧' }
-];
+function metaLine(recipe) {
+  return [
+    recipe.cuisine,
+    recipe.cookTime,
+    recipe.servings ? `Serves ${recipe.servings}` : ''
+  ].filter(Boolean).join(' · ');
+}
+
+const ArrowIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+    <polyline points="12 5 19 12 12 19"></polyline>
+  </svg>
+);
+
+// Reveals [data-reveal] children once as they enter the viewport.
+function useScrollReveal(containerRef, deps) {
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return undefined;
+    const items = root.querySelectorAll('[data-reveal]');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || !('IntersectionObserver' in window)) {
+      items.forEach((el) => el.classList.add('is-in'));
+      return undefined;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    items.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+// Gentle depth for the featured dish: the photo and its close-up details shift a few
+// pixels with the pointer (fine pointers only) and with scroll. Event-driven only,
+// so nothing animates on its own. Skipped entirely for reduced motion.
+function useHeroDepth(figureRef) {
+  useEffect(() => {
+    const fig = figureRef.current;
+    if (!fig || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const hero = fig.closest('.hero');
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    let mx = 0;
+    let my = 0;
+    let frame = 0;
+
+    const render = () => {
+      frame = 0;
+      const progress = Math.min(Math.max(window.scrollY / window.innerHeight, 0), 1);
+      fig.style.setProperty('--sy', progress.toFixed(3));
+      fig.style.setProperty('--mx', mx.toFixed(3));
+      fig.style.setProperty('--my', my.toFixed(3));
+    };
+    const queue = () => { if (!frame) frame = requestAnimationFrame(render); };
+    const onMove = (e) => {
+      const r = hero.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      my = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      queue();
+    };
+    const onLeave = () => { mx = 0; my = 0; queue(); };
+
+    window.addEventListener('scroll', queue, { passive: true });
+    if (finePointer && hero) {
+      hero.addEventListener('pointermove', onMove);
+      hero.addEventListener('pointerleave', onLeave);
+    }
+    queue();
+
+    return () => {
+      window.removeEventListener('scroll', queue);
+      if (hero) {
+        hero.removeEventListener('pointermove', onMove);
+        hero.removeEventListener('pointerleave', onLeave);
+      }
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [figureRef]);
+}
+
+// background-position (%) that centres fraction `f` of the image when zoomed by `zoom`
+const focusPercent = (f, zoom) => Math.min(Math.max(((f * zoom - 0.5) / (zoom - 1)) * 100, 0), 100);
 
 export default function HeroSection({
   onSearch,
@@ -56,347 +109,199 @@ export default function HeroSection({
   onFeaturedClick,
   onViewRecipe,
   onCategorySelect,
-  savedCount = 6,
-  previewRecipes = []
+  savedCount = 0,
+  previewRecipes = [],
+  featuredRecipe,
+  featuredDetails = []
 }) {
-  const [heroSearchInput, setHeroSearchInput] = useState('');
-  const [activeChip, setActiveChip] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const shelfRef = useRef(null);
+  const figureRef = useRef(null);
+  const [photoReady, setPhotoReady] = useState(false);
 
-  // Submit search query directly to discovery
-  const handleSearchSubmit = (e) => {
+  useScrollReveal(shelfRef, [previewRecipes.length]);
+  useHeroDepth(figureRef);
+
+  // Close-up details are cropped from the photo itself, so only show them once it has loaded.
+  useEffect(() => {
+    const img = figureRef.current?.querySelector('img.hero-photo-img');
+    if (img?.complete && img.naturalWidth > 0) setPhotoReady(true);
+  }, [featuredRecipe?.image]);
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (heroSearchInput.trim()) {
-      onSearch(heroSearchInput.trim());
-    } else {
-      onDiscover();
-    }
+    const term = searchInput.trim();
+    if (term) onSearch(term);
+    else onDiscover();
   };
 
-  const handleCategoryClick = (category) => {
-    setActiveCategory(category);
-    if (onCategorySelect) {
-      onCategorySelect(category);
-    }
+  const handleCategoryClick = (id) => {
+    setActiveCategory(id);
+    if (onCategorySelect) onCategorySelect(id);
   };
 
-  const handleChipClick = (chip) => {
-    setActiveChip(activeChip?.id === chip.id ? null : chip);
-  };
+  const featured = featuredRecipe;
 
   return (
-    <section className="hero-smart-section" aria-labelledby="hero-heading">
-      {/* Soft Ambient Background Lighting */}
-      <div className="hero-smart-bg-glow" aria-hidden="true"></div>
+    <>
+      <section className="hero" aria-labelledby="hero-heading">
+        <div className="hero-inner">
+          <div className="hero-copy">
+            <p className="hero-kicker" style={{ '--i': 0 }}>Search, save, cook</p>
+            <h1 id="hero-heading" className="hero-title" style={{ '--i': 1 }}>
+              Find a dinner <em>worth cooking.</em>
+            </h1>
+            <p className="hero-lead" style={{ '--i': 2 }}>
+              Search recipes from TheMealDB, keep the ones you like in your own cookbook, and add your own.
+            </p>
 
-      <div className="hero-smart-container">
-        {/* 1. Header & Value Proposition */}
-        <header className="hero-header-block">
-          <div className="hero-badge-pill">
-            <span className="badge-pulse-dot" aria-hidden="true"></span>
-            <span>Mindful Vegetarian Kitchen Studio</span>
-          </div>
-
-          <h1 id="hero-heading" className="hero-smart-headline">
-            What shall we cook today?
-          </h1>
-
-          <p className="hero-smart-lead">
-            Discover thousands of global vegetarian recipes from TheMealDB, compose custom creations with Gemini AI, or curate your private family cookbook.
-          </p>
-        </header>
-
-        {/* 2. Interactive Discovery Command Bar (Omnibar) */}
-        <div className="hero-command-bar-wrapper">
-          <form 
-            onSubmit={handleSearchSubmit} 
-            className="hero-command-form"
-            role="search"
-            aria-label="Find recipes"
-          >
-            <div className="command-input-container">
-              <svg 
-                className="command-search-icon" 
-                width="20" 
-                height="20" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5" 
-                aria-hidden="true"
-              >
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-
+            <form className="hero-search" onSubmit={handleSubmit} role="search" aria-label="Search recipes online" style={{ '--i': 3 }}>
+              <label htmlFor="hero-search-input" className="sr-only">Search for a dish</label>
               <input
-                type="text"
-                className="hero-command-input"
-                placeholder="Search dish by name, e.g. Saffron Risotto, Ravioli, Dal, Shakshuka..."
-                value={heroSearchInput}
-                onChange={(e) => setHeroSearchInput(e.target.value)}
-                aria-label="Search recipes online"
                 id="hero-search-input"
+                type="text"
+                className="hero-search-input"
+                placeholder="Try shakshuka, dal, ratatouille…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                autoComplete="off"
               />
-
-              {heroSearchInput && (
-                <button
-                  type="button"
-                  className="command-clear-btn"
-                  onClick={() => setHeroSearchInput('')}
-                  aria-label="Clear search input"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            <div className="command-action-buttons">
-              <button 
-                type="submit" 
-                className="btn btn-primary command-submit-btn"
-                id="hero-command-search-btn"
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-                </svg>
+              <button type="submit" className="hero-cta" id="hero-discover-btn">
                 <span>Discover Recipes</span>
+                <ArrowIcon />
+              </button>
+            </form>
+
+            <div className="hero-secondary" style={{ '--i': 4 }}>
+              <button type="button" className="hero-ghost" onClick={onExplore} id="hero-link-cookbook">
+                My Cookbook <span className="hero-count">{savedCount}</span>
+              </button>
+              <button type="button" className="hero-ghost" onClick={onAddRecipe} id="hero-link-add">
+                Add Recipe
               </button>
             </div>
-          </form>
-
-          {/* Quick-Access Cuisine Category Choice Strip */}
-          <div className="hero-category-strip" role="toolbar" aria-label="Cuisine and category filters">
-            <span className="category-strip-label">Quick Browse:</span>
-            <div className="category-pills-row">
-              {CUISINE_QUICK_FILTERS.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={`category-pill-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  aria-pressed={activeCategory === cat.id}
-                >
-                  <span className="pill-icon" aria-hidden="true">{cat.icon}</span>
-                  <span>{cat.label}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Secondary Actions (Clean, keyboard-friendly, visually secondary) */}
-          <div className="hero-secondary-actions-row">
-            <button
-              type="button"
-              className="hero-secondary-link"
-              onClick={onExplore}
-              id="hero-link-cookbook"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-              </svg>
-              <span>Browse Saved Recipes ({savedCount})</span>
-            </button>
-
-            <span className="action-dot-separator" aria-hidden="true">•</span>
-
-            <button
-              type="button"
-              className="hero-secondary-link"
-              onClick={onAddRecipe}
-              id="hero-link-add"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Add Personal Recipe</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Centered Focal Culinary Stage with Floating Ingredient Chips */}
-        <div className="hero-stage-wrapper">
-          <div className="hero-focal-stage" role="region" aria-label="Signature Dish Presentation">
-            {/* Focal Dish Plate Backdrop */}
-            <div className="focal-image-frame">
-              <img 
-                src="/images/hero-saffron-risotto.jpg" 
-                alt="Creamy golden saffron arborio risotto topped with sautéed wild porcini mushrooms, crispy sage leaves, and parmesan shavings in an artisan ceramic dish"
-                className="focal-dish-image"
-                loading="eager"
-              />
-              <div className="dish-inner-gradient" aria-hidden="true"></div>
-
-              {/* Dish Badge */}
-              <div className="focal-dish-tag">
-                <span className="focal-tag-icon">✨</span>
-                <span>Signature Vegetarian Main</span>
-              </div>
-            </div>
-
-            {/* Interactive Floating Ingredient Chips */}
-            <div className="floating-chips-overlay" aria-label="Key ingredients with tasting notes">
-              {INGREDIENT_CHIPS.map((chip) => {
-                const isSelected = activeChip?.id === chip.id;
-                return (
-                  <div 
-                    key={chip.id} 
-                    className={`floating-chip-anchor ${chip.positionClass} ${isSelected ? 'is-active' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      className="floating-chip-btn"
-                      onClick={() => handleChipClick(chip)}
-                      onMouseEnter={() => setActiveChip(chip)}
-                      aria-expanded={isSelected}
-                      title={`Click for tasting note on ${chip.name}`}
-                    >
-                      <span className="chip-icon" aria-hidden="true">{chip.icon}</span>
-                      <span className="chip-title">{chip.name}</span>
-                    </button>
-
-                    {/* Popover Tasting Note */}
-                    {isSelected && (
-                      <div className="chip-popover-card" role="tooltip">
-                        <div className="popover-arrow" aria-hidden="true"></div>
-                        <div className="popover-header">
-                          <strong>{chip.name}</strong>
-                          <button 
-                            type="button" 
-                            className="popover-close-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveChip(null);
-                            }}
-                            aria-label="Close note"
-                          >
-                            ×
-                          </button>
-                        </div>
-                        <p className="popover-text">{chip.note}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Featured Dish Interactive Floating Card */}
-            <div className="featured-dish-banner">
-              <div className="featured-banner-left">
-                <div className="featured-eyebrow">
-                  <span className="veg-indicator-dot" aria-hidden="true"></span>
-                  <span>Pure Vegetarian • 100% Plant-Based Dairy</span>
-                </div>
-                <h2 className="featured-banner-title">
-                  Artisanal Saffron & Wild Porcini Risotto
-                </h2>
-                <div className="featured-banner-meta">
-                  <span className="meta-pill">⏱ 30 mins</span>
-                  <span className="meta-pill">🍽 4 servings</span>
-                  <span className="meta-pill">🌾 Intermediate</span>
-                  <span className="meta-pill">⚡ 490 kcal</span>
-                </div>
-              </div>
-
-              <div className="featured-banner-right">
+          {featured && (
+            <figure className="hero-figure" ref={figureRef}>
+              <div className="hero-photo-wrap">
                 <button
                   type="button"
-                  className="btn btn-primary featured-open-btn"
+                  className="hero-photo"
                   onClick={onFeaturedClick}
+                  aria-label={`View recipe: ${featured.title}`}
                   id="hero-featured-recipe-btn"
                 >
-                  <span>View Recipe & Checklist</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
+                  <RecipePhoto
+                    src={featured.image}
+                    alt={featured.alt}
+                    label={featured.title}
+                    className="hero-photo-img"
+                    eager
+                    fetchPriority="high"
+                    onLoad={() => setPhotoReady(true)}
+                  />
                 </button>
+                {photoReady && featuredDetails.length > 0 && (
+                  <div className="hero-details" aria-hidden="true">
+                    {featuredDetails.map((d, i) => (
+                      <span
+                        key={d.id}
+                        className={`hero-detail hero-detail-${d.id}`}
+                        style={{
+                          '--k': i,
+                          backgroundImage: `url("${featured.image}")`,
+                          backgroundSize: `${d.zoom * 100}%`,
+                          backgroundPosition: `${focusPercent(d.x, d.zoom)}% ${focusPercent(d.y, d.zoom)}%`
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
+              <figcaption className="hero-caption">
+                <div className="hero-caption-text">
+                  <span className="hero-caption-kicker">Featured recipe</span>
+                  <span className="hero-caption-title">{featured.title}</span>
+                  <span className="hero-caption-meta">
+                    {[featured.cuisine, featured.mealDbCategory].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+                <button type="button" className="hero-caption-link" onClick={onFeaturedClick}>
+                  <span>View recipe</span>
+                  <ArrowIcon size={16} />
+                </button>
+              </figcaption>
+              {featured.mealDbUrl && (
+                <p className="hero-credit">
+                  Recipe and photo:{' '}
+                  <a href={featured.mealDbUrl} target="_blank" rel="noopener noreferrer">TheMealDB</a>
+                </p>
+              )}
+            </figure>
+          )}
         </div>
+      </section>
 
-        {/* 4. Curated Collection Preview Strip (Helpful culinary preview) */}
-        {previewRecipes && previewRecipes.length > 0 && (
-          <section className="hero-preview-shelf" aria-labelledby="preview-shelf-title">
-            <div className="shelf-header-row">
-              <div className="shelf-title-wrap">
-                <span className="shelf-eyebrow">From Your Kitchen Collection</span>
-                <h3 id="preview-shelf-title" className="shelf-title">Featured Favorites Ready to Cook</h3>
-              </div>
-              <button 
-                type="button" 
-                className="shelf-view-all-btn"
-                onClick={onExplore}
-              >
-                <span>View Full Cookbook ({savedCount})</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-              </button>
+      <section className="hero-browse" ref={shelfRef} aria-labelledby="shelf-heading">
+        <div className="hero-browse-inner">
+          <div className="browse-head" data-reveal>
+            <div>
+              <p className="section-kicker">From your cookbook</p>
+              <h2 id="shelf-heading" className="shelf-heading">Ready to cook</h2>
             </div>
+            <button type="button" className="shelf-all-link" onClick={onExplore}>
+              <span>View all {savedCount}</span>
+              <ArrowIcon size={15} />
+            </button>
+          </div>
 
-            <div className="shelf-cards-grid">
-              {previewRecipes.map((recipe) => (
-                <article key={recipe.id} className="shelf-recipe-card">
-                  <div 
-                    className="shelf-card-media"
-                    onClick={() => onViewRecipe(recipe)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRecipe(recipe); }}
-                    aria-label={`View recipe for ${recipe.title}`}
-                  >
-                    <img 
-                      src={recipe.image} 
-                      alt={recipe.alt || recipe.title} 
+          <div className="browse-chips" role="toolbar" aria-label="Browse cookbook by category" data-reveal>
+            {BROWSE_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`browse-chip ${activeCategory === cat.id ? 'active' : ''}`}
+                aria-pressed={activeCategory === cat.id}
+                onClick={() => handleCategoryClick(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {previewRecipes.length > 0 && (
+            <div className="shelf-grid">
+              {previewRecipes.map((recipe, i) => (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  className="shelf-card"
+                  style={{ '--i': i }}
+                  data-reveal
+                  onClick={() => onViewRecipe(recipe)}
+                  aria-label={`View recipe: ${recipe.title}`}
+                >
+                  <span className="shelf-card-media">
+                    <RecipePhoto
+                      src={recipe.image}
+                      alt={recipe.alt}
+                      label={recipe.category}
                       className="shelf-card-img"
-                      loading="lazy"
                     />
-                    <span className="shelf-card-category">{recipe.category}</span>
-                  </div>
-
-                  <div className="shelf-card-body">
-                    <h4 
-                      className="shelf-card-title"
-                      onClick={() => onViewRecipe(recipe)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewRecipe(recipe); }}
-                    >
-                      {recipe.title}
-                    </h4>
-
-                    <div className="shelf-card-meta">
-                      <span>⏱ {recipe.cookTime}</span>
-                      <span>•</span>
-                      <span>🍽 {recipe.servings} servings</span>
-                    </div>
-
-                    <div className="shelf-card-footer">
-                      <button 
-                        type="button" 
-                        className="btn btn-secondary btn-sm shelf-cook-btn"
-                        onClick={() => onViewRecipe(recipe)}
-                      >
-                        Cook Dish
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                  </span>
+                  <span className="shelf-card-body">
+                    <span className="shelf-card-cat">{recipe.category}</span>
+                    <span className="shelf-card-title">{recipe.title}</span>
+                    {metaLine(recipe) && <span className="shelf-card-meta">{metaLine(recipe)}</span>}
+                  </span>
+                </button>
               ))}
             </div>
-          </section>
-        )}
-      </div>
-    </section>
+          )}
+        </div>
+      </section>
+    </>
   );
 }

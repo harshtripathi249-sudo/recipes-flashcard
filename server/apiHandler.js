@@ -6,6 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizeMeal } from './mealNormalizer.js';
 
 // Helper to extract Gemini API key from multiple locations
 function getGeminiApiKey(env) {
@@ -36,8 +37,19 @@ function getGeminiApiKey(env) {
   return null;
 }
 
-// Helper to parse JSON body from incoming Node request
+// Helper to parse JSON body from incoming Node request or Vercel Serverless Function
 export function readBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return Promise.resolve(req.body);
+  }
+  if (typeof req.body === 'string') {
+    try {
+      return Promise.resolve(JSON.parse(req.body));
+    } catch {
+      return Promise.reject(new Error('Invalid JSON'));
+    }
+  }
+
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', (chunk) => {
@@ -58,8 +70,11 @@ export function readBody(req) {
   });
 }
 
-// Helper to send JSON responses
+// Helper to send JSON responses (compatible with both Node http.ServerResponse and Vercel response helper)
 export function sendJson(res, statusCode, data) {
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
+    return res.status(statusCode).json(data);
+  }
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -109,54 +124,7 @@ export async function handleTheMealDbSearch(req, res, url) {
       });
     }
 
-    // Normalize each meal into Savoria's recipe shape
-    const normalized = data.meals.map((meal) => {
-      const ingredients = [];
-      for (let i = 1; i <= 20; i++) {
-        const ing = meal[`strIngredient${i}`];
-        const measure = meal[`strMeasure${i}`];
-        if (ing && ing.trim()) {
-          const cleanMeasure = measure && measure.trim() ? `${measure.trim()} ` : '';
-          ingredients.push(`${cleanMeasure}${ing.trim()}`);
-        }
-      }
-
-      const rawInstructions = meal.strInstructions || '';
-      const instructions = rawInstructions
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0 && !line.match(/^STEP \d+$/i));
-
-      let sourceAttribution = 'TheMealDB';
-      if (meal.strSource) {
-        try {
-          const parsedUrl = new URL(meal.strSource);
-          sourceAttribution = `TheMealDB (${parsedUrl.hostname.replace(/^www\./, '')})`;
-        } catch {
-          sourceAttribution = 'TheMealDB';
-        }
-      }
-
-      return {
-        id: `mealdb-${meal.idMeal}`,
-        title: meal.strMeal,
-        category: meal.strCategory || 'Gourmet Mains',
-        cuisine: meal.strArea || 'International',
-        prepTime: '15 mins',
-        cookTime: '30 mins',
-        servings: 4,
-        difficulty: 'Easy',
-        image: meal.strMealThumb,
-        alt: `${meal.strMeal} - ${meal.strArea || ''} cuisine`,
-        description: `${meal.strArea ? meal.strArea + ' ' : ''}${meal.strCategory || 'Recipe'} sourced from ${sourceAttribution}.`,
-        ingredients: ingredients.length > 0 ? ingredients : ['Ingredients detailed in instructions'],
-        instructions: instructions.length > 0 ? instructions : [rawInstructions],
-        notes: meal.strTags ? `Tags: ${meal.strTags}` : '',
-        sourceUrl: meal.strSource || meal.strYoutube || 'https://www.themealdb.com',
-        sourceAttribution,
-        isAiGenerated: false
-      };
-    });
+    const normalized = data.meals.map(normalizeMeal);
 
     return sendJson(res, 200, {
       source: 'themealdb',
@@ -178,7 +146,7 @@ export async function handleTheMealDbSearch(req, res, url) {
 
 /**
  * Handle POST /api/recipes/generate
- * Uses Google Gemini API (gemini-3.8-flash) with strict structured schema validation.
+ * Uses the Google Gemini API with structured JSON output and schema validation.
  */
 export async function handleGeminiGenerate(req, res, env) {
   const apiKey = getGeminiApiKey(env);
@@ -275,10 +243,12 @@ Rules:
           continue;
         }
 
-        const errMsg = parsedErr.error?.message || `Gemini API returned status ${geminiRes.status}`;
+        console.error('[Gemini] upstream status', geminiRes.status, parsedErr.error?.message || '');
         return sendJson(res, geminiRes.status === 429 ? 429 : 502, {
           error: geminiRes.status === 429 ? 'RATE_LIMIT_EXCEEDED' : 'GEMINI_ERROR',
-          message: errMsg,
+          message: geminiRes.status === 429
+            ? 'The AI service is rate-limited right now. Please wait a moment and retry.'
+            : 'The AI service returned an error. Please try again.',
           retryable: true
         });
       }
@@ -298,26 +268,20 @@ Rules:
         throw new Error('Generated recipe did not match expected structure');
       }
 
-      let fallbackImage = '/images/hero-saffron-risotto.jpg';
-      if (parsedRecipe.category === 'Artisanal Pastas') fallbackImage = '/images/spinach-ravioli.jpg';
-      else if (parsedRecipe.category === 'Grain Bowls') fallbackImage = '/images/grain-bowl.jpg';
-      else if (parsedRecipe.category === 'Breakfast & Pastries') fallbackImage = '/images/fresh-pastries.jpg';
-      else if (parsedRecipe.category === 'Seasonal Desserts') fallbackImage = '/images/seasonal-dessert.jpg';
-
       const recipe = {
         id: `ai-${Date.now()}`,
         title: parsedRecipe.title,
-        description: parsedRecipe.description || 'AI-generated recipe formulated by Gemini.',
+        description: parsedRecipe.description || '',
         category: parsedRecipe.category || 'Gourmet Mains',
         prepTime: parsedRecipe.prepTime || '15 mins',
         cookTime: parsedRecipe.cookTime || '25 mins',
         servings: Number(parsedRecipe.servings) || 4,
         difficulty: parsedRecipe.difficulty || 'Easy',
-        image: fallbackImage,
-        alt: `${parsedRecipe.title} (AI-Generated)`,
+        image: '',
+        alt: '',
         ingredients: parsedRecipe.ingredients.filter(Boolean),
         instructions: parsedRecipe.instructions.filter(Boolean),
-        notes: parsedRecipe.notes ? `${parsedRecipe.notes}` : 'AI-generated recipe for culinary exploration.',
+        notes: parsedRecipe.notes ? `${parsedRecipe.notes}` : '',
         sourceUrl: '',
         sourceAttribution: 'Gemini AI',
         isAiGenerated: true
@@ -340,9 +304,10 @@ Rules:
   }
 
   // If all models failed
+  console.error('[Gemini] generation failed:', lastError);
   return sendJson(res, 500, {
     error: 'GENERATION_FAILED',
-    message: `Could not generate recipe: ${lastError}`,
+    message: 'Could not generate a recipe right now. Please try again.',
     retryable: true
   });
 }

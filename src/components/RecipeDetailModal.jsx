@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import RecipePhoto from './RecipePhoto';
 
 export default function RecipeDetailModal({
   recipe,
@@ -10,7 +11,6 @@ export default function RecipeDetailModal({
   onSaveToCollection
 }) {
   const [checkedIngredients, setCheckedIngredients] = useState({});
-  const [imgError, setImgError] = useState(false);
 
   // Keyboard accessibility: Close on Escape
   useEffect(() => {
@@ -48,23 +48,17 @@ export default function RecipeDetailModal({
 
         {/* Modal Header Media */}
         <div className="detail-media-container">
-          {!imgError ? (
-            <img
-              src={recipe.image}
-              alt={recipe.alt || recipe.title}
-              className="detail-header-image"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="detail-image-fallback">
-              <span>{recipe.category}</span>
-            </div>
-          )}
+          <RecipePhoto
+            src={recipe.image}
+            alt={recipe.alt || recipe.title}
+            label={recipe.category}
+            className="detail-header-image"
+          />
           <div className="detail-media-overlay">
             <div className="overlay-tags">
               <span className="badge badge-category">{recipe.category}</span>
               {recipe.isAiGenerated && (
-                <span className="badge badge-ai">🤖 AI-Generated</span>
+                <span className="badge badge-ai">AI-generated</span>
               )}
               {recipe.cuisine && (
                 <span className="badge badge-cuisine">{recipe.cuisine}</span>
@@ -91,9 +85,8 @@ export default function RecipeDetailModal({
           {/* AI Disclaimer Alert if applicable */}
           {recipe.isAiGenerated && (
             <div className="ai-modal-disclaimer" role="alert">
-              <span className="disclaimer-icon">⚠️</span>
               <div>
-                <strong>AI-Generated Recipe</strong>: This dish was formulated by Gemini AI for culinary exploration. It is not chef-tested or verified. Please adjust seasonings, temperatures, and cook times to taste.
+                <strong>AI-generated recipe.</strong> Written by Gemini AI. It has not been tested or verified, so check quantities, temperatures and cooking times yourself.
               </div>
             </div>
           )}
@@ -111,41 +104,70 @@ export default function RecipeDetailModal({
                       rel="noopener noreferrer"
                       className="source-inline-link"
                     >
-                      View Original Publisher ↗
+                      View original recipe ↗
+                    </a>
+                  )}
+                  {recipe.mealDbUrl && recipe.mealDbUrl !== recipe.sourceUrl && (
+                    <a
+                      href={recipe.mealDbUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="source-inline-link"
+                    >
+                      TheMealDB entry ↗
                     </a>
                   )}
                 </p>
               )}
+              {recipe.imageCredit && recipe.image && (
+                <p className="detail-source-attribution">{recipe.imageCredit}</p>
+              )}
             </div>
           </div>
           
-          <p className="detail-description">{recipe.description}</p>
+          {recipe.description && <p className="detail-description">{recipe.description}</p>}
 
           {/* Quick Info Badges Grid */}
-          <div className="detail-specs-grid">
-            <div className="spec-item">
-              <span className="spec-label">Prep Time</span>
-              <span className="spec-val">{recipe.prepTime || '15 mins'}</span>
+          {(recipe.prepTime || recipe.cookTime || recipe.servings || recipe.difficulty || recipe.cuisine || recipe.calories) && (
+            <div className="detail-specs-grid">
+              {recipe.prepTime && (
+                <div className="spec-item">
+                  <span className="spec-label">Prep Time</span>
+                  <span className="spec-val">{recipe.prepTime}</span>
+                </div>
+              )}
+              {recipe.cookTime && (
+                <div className="spec-item">
+                  <span className="spec-label">Cook Time</span>
+                  <span className="spec-val">{recipe.cookTime}</span>
+                </div>
+              )}
+              {recipe.servings ? (
+                <div className="spec-item">
+                  <span className="spec-label">Servings</span>
+                  <span className="spec-val">{recipe.servings}</span>
+                </div>
+              ) : null}
+              {recipe.difficulty && (
+                <div className="spec-item">
+                  <span className="spec-label">Difficulty</span>
+                  <span className="spec-val">{recipe.difficulty}</span>
+                </div>
+              )}
+              {recipe.cuisine && (
+                <div className="spec-item">
+                  <span className="spec-label">Cuisine</span>
+                  <span className="spec-val">{recipe.cuisine}</span>
+                </div>
+              )}
+              {recipe.calories && (
+                <div className="spec-item">
+                  <span className="spec-label">Nutrition (entered by you)</span>
+                  <span className="spec-val">{recipe.calories}</span>
+                </div>
+              )}
             </div>
-            <div className="spec-item">
-              <span className="spec-label">Cook Time</span>
-              <span className="spec-val">{recipe.cookTime || '25 mins'}</span>
-            </div>
-            <div className="spec-item">
-              <span className="spec-label">Yield / Servings</span>
-              <span className="spec-val">{recipe.servings} portions</span>
-            </div>
-            <div className="spec-item">
-              <span className="spec-label">Difficulty</span>
-              <span className="spec-val">{recipe.difficulty || 'Easy'}</span>
-            </div>
-            {recipe.calories && (
-              <div className="spec-item">
-                <span className="spec-label">Est. Nutrition</span>
-                <span className="spec-val">{recipe.calories}</span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Two-Column Recipe Layout: Ingredients & Directions */}
           <div className="detail-content-columns">
@@ -204,7 +226,7 @@ export default function RecipeDetailModal({
                       <line x1="12" y1="16" x2="12" y2="12"></line>
                       <line x1="12" y1="8" x2="12.01" y2="8"></line>
                     </svg>
-                    <strong>Practical Kitchen Tip</strong>
+                    <strong>Notes</strong>
                   </div>
                   <p className="chef-notes-content">{recipe.notes}</p>
                 </div>

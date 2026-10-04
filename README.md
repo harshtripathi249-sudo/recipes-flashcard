@@ -49,10 +49,19 @@ npm run dev
 ```
 Open your browser at `http://localhost:5173/`.
 
-### 4. Build for Production
+### 4. Build and run for Production
 ```bash
 npm run build
+npm start        # serves dist/ and the /api routes (server/index.js), default port 3000
 ```
+`npm run build` alone only produces static files. The search and AI routes live in the Node server
+(`npm start`, or `vite dev` / `vite preview` locally), so a static-only host will not have them.
+Set `GEMINI_API_KEY` (and optionally `PORT`) as environment variables on the host. Never commit `.env`.
+
+### 5. Seed data and credits
+The starter cookbook is built from real TheMealDB entries (`npm run seed` regenerates
+`src/data/initialRecipes.js`). Photos are loaded from TheMealDB, not stored in this repo.
+See [CREDITS.md](CREDITS.md) for every photo and recipe source, and for the AI-generated images that were removed.
 
 ---
 
@@ -61,8 +70,8 @@ npm run build
 ### 1. TheMealDB API
 - **Endpoint**: `https://www.themealdb.com/api/json/v1/1/`
 - **Key**: Uses the documented public test key `1` for development.
-- **Limitations**: The public test key is intended for testing and development. It provides access to thousands of standard dishes and ingredients, but does not provide advanced filters or commercial SLA guarantees.
+- **Limitations**: The public test key is intended for testing and development; check TheMealDB's terms (and consider a supporter key) before a public launch. It provides access to thousands of standard dishes and ingredients, but does not provide advanced filters or commercial SLA guarantees.
 
 ### 2. Google Gemini API
-- **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+- **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent` (model fallback list in `server/apiHandler.js`)
 - **Limitations**: Free-tier Gemini keys have rate limits (typically 15 RPM / 1 million TPM). The application includes a 15-second request timeout, graceful rate-limit detection (HTTP 429), and user-friendly error banners with retry buttons.

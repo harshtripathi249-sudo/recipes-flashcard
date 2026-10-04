@@ -6,6 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+firebase-debug.log*
+firestore-debug.log*
 
 node_modules
 dist
@@ -15,7 +17,18 @@ dist-ssr
 # Environment variables & secrets
 .env
 .env.*
+.env*.local
 !.env.example
+
+# Firebase & service accounts
+*serviceAccountKey*.json
+*service-account*.json
+*firebase-adminsdk*.json
+.firebase/
+.firebaserc.local
+
+# Vercel deployment folder
+.vercel
 
 # Editor directories and files
 .vscode/*

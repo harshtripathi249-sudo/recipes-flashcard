@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import RecipeCard from './RecipeCard';
+import RecipePhoto from './RecipePhoto';
 
-const SAMPLE_SEARCHES = ['Arrabiata', 'Pancakes', 'Minestrone', 'Dal', 'Ratatouille', 'Apple Pie'];
+const SAMPLE_SEARCHES = ['Shakshuka', 'Ratatouille', 'Falafel', 'Dal', 'Pancakes', 'Apple Pie'];
 
 export default function DiscoverSection({
   savedRecipes,
@@ -138,7 +138,7 @@ export default function DiscoverSection({
 
         <h2 className="discover-title">Explore Global Recipes</h2>
         <p className="discover-subtitle">
-          Search thousands of international dishes from TheMealDB database, or generate a tailored recipe using Gemini AI.
+          Search TheMealDB by dish name. If nothing suitable turns up, you can ask Gemini to write a recipe. Online results stay here until you save them to My Recipes.
         </p>
 
         {/* Discovery Search Form */}
@@ -151,7 +151,7 @@ export default function DiscoverSection({
             <input
               type="text"
               className="discover-input"
-              placeholder="Search dish by name, e.g. Arrabiata, Pancakes, Minestrone..."
+              placeholder="Dish name, e.g. Shakshuka, Ratatouille, Dal"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search dishes online"
@@ -246,9 +246,9 @@ export default function DiscoverSection({
         <div className="ai-recipe-showcase">
           <div className="ai-showcase-header">
             <div className="ai-badge-prominent">
-              <span>🤖 AI-Generated Recipe</span>
+              <span>AI-generated recipe</span>
             </div>
-            <span className="ai-disclaimer-pill">Formulated by Gemini • Unverified</span>
+            <span className="ai-disclaimer-pill">Written by Gemini. Not verified or tested.</span>
           </div>
 
           <div className="ai-recipe-card-wrapper">
@@ -256,11 +256,14 @@ export default function DiscoverSection({
               <h3>{aiRecipe.title}</h3>
               <p className="ai-card-desc">{aiRecipe.description}</p>
               <div className="ai-card-meta">
-                <span>⏱ Prep {aiRecipe.prepTime} • Cook {aiRecipe.cookTime}</span>
-                <span>•</span>
-                <span>🍽 {aiRecipe.servings} servings</span>
-                <span>•</span>
-                <span className="cuisine-tag">{aiRecipe.category}</span>
+                {[
+                  aiRecipe.prepTime && `Prep ${aiRecipe.prepTime}`,
+                  aiRecipe.cookTime && `Cook ${aiRecipe.cookTime}`,
+                  aiRecipe.servings && `Serves ${aiRecipe.servings}`,
+                  aiRecipe.category
+                ].filter(Boolean).map((item, i) => (
+                  <span key={item}>{i > 0 ? '· ' : ''}{item}</span>
+                ))}
               </div>
             </div>
 
@@ -307,14 +310,14 @@ export default function DiscoverSection({
       {!isLoading && results.length > 0 && (
         <div className="discover-results-area">
           <div className="results-header-row">
-            <h3>Database Matches from TheMealDB ({results.length})</h3>
+            <h3>From TheMealDB ({results.length})</h3>
             <button
               type="button"
               className="btn-link-ai"
               onClick={() => handleGenerateAi(activeSearch)}
               disabled={isGeneratingAi}
             >
-              {isGeneratingAi ? 'Generating AI Recipe...' : '✨ Generate AI recipe for this dish instead'}
+              {isGeneratingAi ? 'Generating AI recipe…' : 'Not what you wanted? Ask Gemini to write one'}
             </button>
           </div>
 
@@ -325,17 +328,13 @@ export default function DiscoverSection({
                 <div key={dish.id} className="recipe-card discover-card">
                   {/* Media */}
                   <div className="card-media-wrapper" onClick={() => onViewRecipe(dish)}>
-                    <img
+                    <RecipePhoto
                       src={dish.image}
                       alt={dish.alt || dish.title}
+                      label={dish.cuisine || dish.category}
                       className="card-image"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.target.src = '/images/hero-saffron-risotto.jpg';
-                      }}
                     />
-                    <span className="card-category-badge">{dish.cuisine || dish.category}</span>
-                    <span className="source-watermark-badge">{dish.sourceAttribution}</span>
+                    <span className="card-category-badge">{dish.mealDbCategory || dish.category}</span>
                   </div>
 
                   {/* Body */}
@@ -343,40 +342,20 @@ export default function DiscoverSection({
                     <h3 className="card-title" onClick={() => onViewRecipe(dish)}>
                       {dish.title}
                     </h3>
-                    <p className="card-description">
-                      {dish.description}
-                    </p>
+                    {dish.cuisine && <p className="card-description">{dish.cuisine} cuisine</p>}
 
-                    <div className="card-meta-row">
-                      <span className="meta-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        <span>{dish.cookTime}</span>
-                      </span>
-
-                      <span className="meta-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                          <circle cx="9" cy="7" r="4"></circle>
-                        </svg>
-                        <span>{dish.servings} serv.</span>
-                      </span>
-
-                      {dish.sourceUrl && (
-                        <a
-                          href={dish.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="source-ext-link"
-                          onClick={(e) => e.stopPropagation()}
-                          title="Open original source recipe"
-                        >
-                          Source ↗
-                        </a>
+                    <p className="source-line">
+                      Recipe and photo:{' '}
+                      <a href={dish.mealDbUrl} target="_blank" rel="noopener noreferrer">TheMealDB</a>
+                      {dish.sourceUrl && dish.sourceUrl !== dish.mealDbUrl && (
+                        <>
+                          {' · '}
+                          <a href={dish.sourceUrl} target="_blank" rel="noopener noreferrer">
+                            Original source<span className="sr-only"> for {dish.title}</span> ↗
+                          </a>
+                        </>
                       )}
-                    </div>
+                    </p>
 
                     {/* Discover Actions */}
                     <div className="discover-card-actions">
@@ -407,7 +386,7 @@ export default function DiscoverSection({
       )}
 
       {/* No Results from Database -> Offer AI Generation Fallback */}
-      {!isLoading && hasSearched && results.length === 0 && !searchError && (
+      {!isLoading && hasSearched && results.length === 0 && !searchError && !aiRecipe && (
         <div className="discover-empty-state">
           <div className="empty-icon-wrap" aria-hidden="true">
             <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#8C827A" strokeWidth="1.5">
@@ -417,17 +396,17 @@ export default function DiscoverSection({
             </svg>
           </div>
 
-          <h3>No Database Matches for &ldquo;{activeSearch}&rdquo;</h3>
+          <h3>Nothing found for &ldquo;{activeSearch}&rdquo;</h3>
           <p>
-            TheMealDB does not have an entry for this exact dish name. Would you like Gemini AI to formulate a structured recipe?
+            TheMealDB has no entry with this name. You can try a different spelling, or ask Gemini to write a recipe.
           </p>
 
           <div className="ai-fallback-box">
             <div className="ai-fallback-info">
-              <span className="ai-chip">🤖 AI Recipe Generator</span>
+              <span className="ai-chip">AI recipe</span>
               <h4>Generate &ldquo;{activeSearch}&rdquo; with AI</h4>
               <p className="ai-disclaimer-text">
-                Recipes created by AI are generated culinary formulations. They are clearly labeled as AI-generated and not verified or chef-tested.
+                Gemini writes the recipe from the dish name. It is labelled AI-generated and has not been verified or tested.
               </p>
             </div>
 
@@ -460,21 +439,18 @@ export default function DiscoverSection({
       {!hasSearched && (
         <div className="discover-welcome-panel">
           <div className="welcome-feature-card">
-            <div className="feature-icon" aria-hidden="true">🌐</div>
-            <h4>International Recipe Database</h4>
-            <p>Access authentic dishes from European, Asian, American, and Mediterranean culinary traditions.</p>
+            <h4>Search TheMealDB</h4>
+            <p>Look up a dish by name. Each result links back to TheMealDB and, when available, the original recipe.</p>
           </div>
 
           <div className="welcome-feature-card">
-            <div className="feature-icon" aria-hidden="true">🤖</div>
-            <h4>Gemini AI Fallback</h4>
-            <p>If a rare or regional specialty isn't found in the database, Gemini generates a structured step-by-step recipe.</p>
+            <h4>Ask Gemini if you need to</h4>
+            <p>If nothing matches, you can have Gemini write a recipe. It is always labelled AI-generated and is not verified or tested.</p>
           </div>
 
           <div className="welcome-feature-card">
-            <div className="feature-icon" aria-hidden="true">📖</div>
-            <h4>One-Click Save</h4>
-            <p>Save any discovered recipe directly into your personal cookbook, edit instructions, and tick off ingredients while cooking.</p>
+            <h4>Save what you like</h4>
+            <p>Results stay separate until you save them. Saved recipes go to My Recipes, where you can edit notes and tick off ingredients.</p>
           </div>
         </div>
       )}

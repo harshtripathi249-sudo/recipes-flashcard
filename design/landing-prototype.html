@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Savoria — Landing prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #FAF7F2;
+  --cream-deep: #F4EFEB;
+  --ink: #1C1917;
+  --ink-2: #57534E;
+  --ink-3: #6F665E;
+  --green: #2D5A43;
+  --green-deep: #1F4331;
+  --green-night: #17342A;
+  --green-tint: #EBF2ED;
+  --tomato: #C8412B;
+  --tomato-deep: #A5321F;
+  --tomato-light: #FF9B82;
+  --line: #ECE5DC;
+  --line-2: #DCD3C7;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); line-height: 1.55; overflow-x: hidden; }
+img, svg { display: block; max-width: 100%; }
+button, a { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; border: 0; background: none; }
+a { text-decoration: none; }
+:focus-visible { outline: 3px solid var(--tomato); outline-offset: 3px; border-radius: 8px; }
+
+/* ---------- Nav ---------- */
+.nav { position: sticky; top: 0; z-index: 20; background: rgba(250,247,242,.94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.nav-in { max-width: 1240px; margin: 0 auto; padding: .7rem var(--gutter); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { font-family: var(--font-serif); font-weight: 700; font-size: 1.4rem; letter-spacing: -.02em; display: inline-flex; align-items: center; gap: .45rem; }
+.brand::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--tomato); }
+.nav-links { display: flex; align-items: center; gap: .25rem; }
+.nav-link { font-size: .9rem; font-weight: 600; color: var(--ink-2); padding: .6rem .8rem; border-radius: 10px; transition: color .2s, background .2s; }
+.nav-link:hover { color: var(--tomato); background: rgba(200,65,43,.07); }
+.nav-add { font-size: .9rem; font-weight: 600; color: var(--green); border: 1.5px solid var(--green); padding: .5rem 1.05rem; min-height: 40px; border-radius: 10px; margin-left: .5rem; transition: background .2s, color .2s, border-color .2s; }
+.nav-add:hover { background: var(--green); color: #fff; }
+
+/* ---------- Hero stage: deep green for contrast with the photo ---------- */
+.stage { position: relative; overflow: clip; background: radial-gradient(120% 90% at 85% 40%, #2D5A43 0%, var(--green-deep) 48%, var(--green-night) 100%); color: var(--cream); border-radius: 0 0 clamp(28px, 5vw, 56px) clamp(28px, 5vw, 56px); }
+.hero { position: relative; max-width: 1360px; margin: 0 auto; padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter) clamp(3rem, 7vw, 6rem); display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(2rem, 3.5vw, 3.5rem); align-items: center; }
+.hero-copy { position: relative; z-index: 3; min-width: 0; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--green); display: block; margin-bottom: 1.1rem; }
+.hero .eyebrow { color: #F4C9BD; display: inline-flex; align-items: center; gap: .6rem; }
+.hero .eyebrow::before { content: ''; width: 28px; height: 2px; background: var(--tomato-light); border-radius: 2px; }
+h1 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(2.3rem, 4.1vw, 3.7rem); line-height: 1.05; letter-spacing: -.03em; text-wrap: balance; overflow-wrap: break-word; color: #FFFDF8; }
+h1 em { display: block; font-style: italic; font-weight: 500; color: var(--tomato-light); }
+.lead { margin-top: 1.25rem; font-size: clamp(1rem, 1.2vw + .5rem, 1.15rem); color: rgba(250,247,242,.82); max-width: 29rem; }
+.cta { margin-top: 2rem; display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: .65rem; background: var(--tomato); color: #fff; font-weight: 700; font-size: 1.02rem; padding: .95rem 1.8rem; min-height: 56px; border-radius: 16px; box-shadow: 0 10px 26px rgba(200,65,43,.38), inset 0 1px 0 rgba(255,255,255,.18); transition: background .25s, transform .3s var(--ease-out), box-shadow .3s; }
+.btn-primary svg { transition: transform .3s var(--ease-out); }
+.btn-primary:hover { background: var(--tomato-deep); transform: translateY(-2px); box-shadow: 0 16px 32px rgba(200,65,43,.45), inset 0 1px 0 rgba(255,255,255,.18); }
+.btn-primary:hover svg { transform: translateX(4px); }
+.btn-primary:active { transform: translateY(0) scale(.98); }
+.stage :focus-visible { outline-color: #fff; }
+
+.secondary { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.btn-ghost { display: inline-flex; align-items: center; justify-content: center; font-size: .92rem; font-weight: 600; color: var(--cream); min-height: 46px; padding: .6rem 1.15rem; border: 1.5px solid rgba(250,247,242,.38); border-radius: 14px; transition: background .25s, border-color .25s, transform .3s var(--ease-out), color .25s; }
+.btn-ghost:hover { background: rgba(250,247,242,.12); border-color: rgba(250,247,242,.85); transform: translateY(-1px); }
+.btn-ghost:active { transform: scale(.98); }
+
+/* Photo + layered ingredients */
+.hero-media { position: relative; z-index: 2; min-width: 0; }
+.disc { position: absolute; z-index: 0; width: 62%; aspect-ratio: 1; right: -6%; top: -14%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #E2573D, var(--tomato) 55%, var(--tomato-deep)); opacity: .95; }
+.hero-frame { position: relative; z-index: 1; border-radius: 30px; overflow: hidden; aspect-ratio: 1 / 0.9; background: #2a4a3a; box-shadow: 0 40px 70px -24px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); }
+.hero-frame img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; transform: scale(var(--parallax, 1.04)); will-change: transform; }
+.hero-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 58%, rgba(14,24,18,.5)); pointer-events: none; }
+
+.ing { position: absolute; z-index: 2; width: var(--w, 90px); pointer-events: none; rotate: var(--r, 0deg); transform: translate3d(calc(var(--mx, 0) * var(--d, 1) * 18px), calc(var(--my, 0) * var(--d, 1) * 14px + var(--sy, 0) * var(--d, 1) * -70px), 0); filter: drop-shadow(0 10px 14px rgba(0,0,0,.28)); }
+.ing svg { width: 100%; height: auto; overflow: visible; }
+.ing-sage    { --w: clamp(84px, 11vw, 150px); --r: -18deg; --d: 1.4; left: -7%; top: -9%; z-index: 3; }
+.ing-saffron { --w: clamp(60px, 8vw, 110px);  --r: 14deg;  --d: 1.1; right: 2%;  top: -7%; z-index: 3; }
+.ing-parm    { --w: clamp(70px, 9vw, 130px);  --r: 8deg;   --d: 1.7; right: -6%; top: 46%; z-index: 3; }
+.ing-porcini { --w: clamp(72px, 10vw, 140px); --r: -10deg; --d: 1.2; left: -8%; bottom: 14%; z-index: 3; }
+.ing-thyme   { --w: clamp(70px, 8vw, 120px);  --r: 24deg;  --d: .8;  right: 14%; bottom: -8%; z-index: 3; }
+
+/* Featured recipe card — sits on the photo, opens the recipe */
+.feature { position: absolute; z-index: 4; left: clamp(.75rem, 2vw, 1.5rem); right: clamp(.75rem, 2vw, 1.5rem); bottom: clamp(.75rem, 2vw, 1.5rem); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem 1rem 1.3rem; min-height: 64px; background: rgba(250,247,242,.97); backdrop-filter: blur(12px); color: var(--ink); border-radius: 20px; text-align: left; box-shadow: 0 14px 34px rgba(0,0,0,.28); transition: transform .45s var(--ease-out), box-shadow .45s var(--ease-out); }
+.feature:hover { transform: translateY(-4px); box-shadow: 0 22px 44px rgba(0,0,0,.34); }
+.feature:active { transform: translateY(-1px) scale(.99); }
+.feature-text { min-width: 0; }
+.feature-kicker { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tomato); }
+.feature-title { font-family: var(--font-serif); font-weight: 600; font-size: 1.15rem; line-height: 1.25; margin-top: .15rem; }
+.feature-meta { margin-top: .25rem; font-size: .8rem; color: var(--ink-3); font-weight: 500; }
+.feature-go { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: var(--tomato); color: #fff; display: grid; place-items: center; transition: transform .35s var(--ease-out), background .25s; }
+.feature:hover .feature-go { transform: translateX(3px) rotate(-8deg); background: var(--tomato-deep); }
+
+/* ---------- Browse + shelf ---------- */
+.band { background: var(--cream-deep); border-bottom: 1px solid var(--line); margin-top: calc(clamp(28px, 5vw, 56px) * -1); padding-top: clamp(28px, 5vw, 56px); }
+.section { max-width: 1240px; margin: 0 auto; padding: clamp(2.75rem, 6vw, 4.75rem) var(--gutter); }
+.section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem 1.5rem; margin-bottom: 1.9rem; flex-wrap: wrap; }
+.band .eyebrow, .section > .reveal .eyebrow { color: var(--tomato); }
+h2 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(1.7rem, 3.2vw, 2.4rem); line-height: 1.12; letter-spacing: -.025em; }
+.chips { display: flex; gap: .5rem; flex-wrap: wrap; }
+.chip { font-size: .86rem; font-weight: 600; color: var(--ink-2); background: #fff; border: 1.5px solid var(--line-2); padding: .55rem 1.05rem; min-height: 42px; border-radius: 999px; transition: all .25s var(--ease-out); }
+.chip:hover { border-color: var(--tomato); color: var(--tomato); transform: translateY(-1px); }
+.chip:active { transform: scale(.97); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.card { position: relative; display: block; background: #fff; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; transition: transform .5s var(--ease-out), box-shadow .5s var(--ease-out), border-color .3s; }
+.card:hover { transform: translateY(-6px); box-shadow: 0 24px 44px rgba(28,25,23,.13); border-color: rgba(200,65,43,.35); }
+.card:focus-visible { outline-offset: 4px; border-radius: 22px; }
+.card-img { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #E2DBD2; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--ease-out); }
+.card:hover .card-img img { transform: scale(1.06); }
+.card-go { position: absolute; right: .9rem; bottom: .9rem; width: 40px; height: 40px; border-radius: 50%; background: var(--tomato); color: #fff; display: grid; place-items: center; opacity: 0; transform: translateY(8px) scale(.9); transition: opacity .3s, transform .4s var(--ease-out); }
+.card:hover .card-go, .card:focus-visible .card-go { opacity: 1; transform: none; }
+.card-body { padding: 1.15rem 1.3rem 1.4rem; }
+.card-cat { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tomato); }
+.card-title { font-family: var(--font-serif); font-weight: 600; font-size: 1.18rem; line-height: 1.3; margin: .3rem 0 .5rem; transition: color .25s; }
+.card:hover .card-title { color: var(--green); }
+.card-meta { font-size: .82rem; color: var(--ink-3); font-weight: 500; }
+
+/* ---------- Motion: one-shot entrances, scroll reveals, pointer/scroll drift. No loops. ---------- */
+.js .intro { opacity: 0; transform: translateY(16px); transition: opacity .8s var(--ease-out), transform .8s var(--ease-out); transition-delay: calc(var(--i, 0) * 90ms); }
+.js .hero-frame { clip-path: inset(7% 7% 7% 7% round 30px); transition: clip-path 1.2s var(--ease-out); }
+.js .hero-frame img { transform: scale(1.12); transition: transform 1.5s var(--ease-out); }
+.js .disc { opacity: 0; scale: .7; transition: opacity .9s ease .2s, scale 1.3s var(--ease-out) .2s; }
+.js .feature { opacity: 0; transform: translateY(16px); transition: opacity .8s var(--ease-out) .6s, transform .8s var(--ease-out) .6s, box-shadow .45s var(--ease-out); }
+.js .ing { opacity: 0; scale: .8; transition: opacity .9s ease calc(.45s + var(--k, 0) * 90ms), scale 1.2s var(--ease-out) calc(.45s + var(--k, 0) * 90ms), transform .8s var(--ease-out) 0s; }
+.js.ready .intro, .js.ready .feature { opacity: 1; transform: none; }
+.js.ready .feature:hover { transform: translateY(-4px); transition-delay: 0s; }
+.js.ready .feature:active { transform: translateY(-1px) scale(.99); }
+.js.ready .hero-frame { clip-path: inset(0 0 0 0 round 30px); }
+.js.ready .hero-frame img { transform: scale(var(--parallax, 1.04)); }
+.js.ready .disc { opacity: .95; scale: 1; }
+.js.ready .ing { opacity: 1; scale: 1; }
+.js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s var(--ease-out), transform .8s var(--ease-out), box-shadow .5s var(--ease-out), border-color .3s; transition-delay: calc(var(--i, 0) * 110ms); }
+.js .reveal.in { opacity: 1; transform: none; }
+.js .reveal.in.card:hover { transform: translateY(-6px); transition-delay: 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .intro, .js .reveal, .js .feature, .js .disc, .js .ing { opacity: 1 !important; transform: none !important; scale: 1 !important; transition: none !important; }
+  .js .hero-frame { clip-path: none !important; transition: none !important; }
+  .js .hero-frame img { transform: none !important; transition: none !important; }
+  .ing { transform: none !important; }
+  .btn-primary, .btn-ghost, .card, .card img, .feature, .chip { transition-duration: .01ms !important; }
+  * { scroll-behavior: auto !important; }
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 960px) {
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; padding-bottom: 3.5rem; }
+  .hero-frame { aspect-ratio: 4 / 3; }
+  .disc { width: 56%; right: -2%; top: -10%; }
+  .ing-sage { left: -3%; } .ing-parm { right: -3%; } .ing-porcini { left: -3%; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Mobile: single column, nothing wider than the viewport ---------- */
+@media (max-width: 600px) {
+  .nav-link { display: none; }
+  .hero { padding-top: 1.75rem; gap: 2.25rem; }
+  h1 { font-size: clamp(2.1rem, 10vw, 2.6rem); }
+  .cta { align-items: stretch; }
+  .btn-primary { width: 100%; }
+  .secondary { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .btn-ghost { width: 100%; min-height: 48px; padding-inline: .5rem; }
+  .hero-frame { aspect-ratio: 4 / 5; border-radius: 24px; }
+  .js .hero-frame { clip-path: inset(4% 4% 4% 4% round 24px); }
+  .js.ready .hero-frame { clip-path: inset(0 0 0 0 round 24px); }
+  .disc { width: 70%; right: -4%; top: -6%; }
+  .ing-sage    { --w: 78px; left: -2%; top: -6%; }
+  .ing-saffron { --w: 58px; right: 3%; top: -5%; }
+  .ing-parm    { --w: 64px; right: -2%; top: 40%; }
+  .ing-porcini { --w: 68px; left: -2%; bottom: 20%; }
+  .ing-thyme   { display: none; }
+  .feature { padding: .8rem .9rem .8rem 1.05rem; border-radius: 18px; }
+  .feature-title { font-size: 1.02rem; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .section-head { align-items: flex-start; flex-direction: column; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin-right: calc(var(--gutter) * -1); padding-right: var(--gutter); scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; }
+  .card-go { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js');</script>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top">Savoria</a>
+    <nav class="nav-links" aria-label="Main">
+      <a class="nav-link" href="#cookbook">My Cookbook</a>
+      <a class="nav-link" href="#discover">Discover</a>
+      <button class="nav-add" type="button">Add Recipe</button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="stage" id="stage">
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-copy">
+        <span class="eyebrow intro" style="--i:0">Vegetarian recipe studio</span>
+        <h1 id="hero-heading" class="intro" style="--i:1">Cook something <em>worth savoring.</em></h1>
+        <p class="lead intro" style="--i:2">Discover vegetarian recipes from around the world, then keep the ones you love in your own cookbook.</p>
+        <div class="cta intro" style="--i:3">
+          <a class="btn-primary" href="#discover" id="discover-cta">
+            Discover Recipes
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <div class="secondary">
+            <a class="btn-ghost" href="#cookbook">My Cookbook (7)</a>
+            <button class="btn-ghost" type="button">Add Recipe</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-media" id="hero-media">
+        <div class="disc" aria-hidden="true"></div>
+        <div class="hero-frame" id="hero-frame">
+          <img src="https://www.themealdb.com/images/media/meals/g373701551450225.jpg" width="1376" height="768" alt="Photograph of Shakshuka" fetchpriority="high" />
+        </div>
+
+        <!-- Ingredient details that match the dish (decorative) -->
+        <div class="ing ing-sage" style="--k:0" aria-hidden="true">
+          <svg viewBox="0 0 100 70"><path d="M4 40 C14 8 60 -2 96 14 C92 50 52 74 4 40Z" fill="#5E8F55"/><path d="M4 40 C30 34 62 26 96 14" fill="none" stroke="#2F5E37" stroke-width="2.2" stroke-linecap="round"/><path d="M30 35 L44 52 M46 30 L62 46 M62 24 L76 36" fill="none" stroke="#2F5E37" stroke-width="1.4" stroke-linecap="round"/><path d="M6 40 C20 22 52 12 88 14" fill="none" stroke="#86B67A" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
+        </div>
+        <div class="ing ing-saffron" style="--k:1" aria-hidden="true">
+          <svg viewBox="0 0 100 100"><g fill="none" stroke="#E04A2B" stroke-width="4.5" stroke-linecap="round"><path d="M12 14 C28 26 36 52 74 84"/><path d="M26 8 C44 22 54 46 86 70"/><path d="M6 32 C20 40 28 62 58 90"/></g><g fill="#F07A3C"><circle cx="74" cy="84" r="4"/><circle cx="86" cy="70" r="4"/><circle cx="58" cy="90" r="4"/></g></svg>
+        </div>
+        <div class="ing ing-parm" style="--k:2" aria-hidden="true">
+          <svg viewBox="0 0 100 60"><path d="M4 44 C16 8 72 -4 96 26 C70 22 38 30 4 44Z" fill="#F6E3AE" stroke="#DDBE6B" stroke-width="2"/><path d="M16 36 C34 18 62 14 84 24" fill="none" stroke="#fff6d6" stroke-width="2" stroke-linecap="round" opacity=".8"/></svg>
+        </div>
+        <div class="ing ing-porcini" style="--k:3" aria-hidden="true">
+          <svg viewBox="0 0 100 90"><path d="M36 48 H64 C66 66 66 76 62 84 C56 90 44 90 38 84 C34 76 34 66 36 48Z" fill="#EBD7B4"/><path d="M6 50 C6 14 94 14 94 50 C94 54 90 56 84 56 H16 C10 56 6 54 6 50Z" fill="#9C6234"/><path d="M14 38 C26 24 56 20 82 30" fill="none" stroke="#C48A55" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg>
+        </div>
+        <div class="ing ing-thyme" style="--k:4" aria-hidden="true">
+          <svg viewBox="0 0 100 60"><path d="M4 52 C30 44 64 30 96 10" fill="none" stroke="#3E6B3C" stroke-width="2.6" stroke-linecap="round"/><g fill="#6E9F63"><ellipse cx="22" cy="42" rx="7" ry="3.4" transform="rotate(-30 22 42)"/><ellipse cx="30" cy="52" rx="7" ry="3.4" transform="rotate(20 30 52)"/><ellipse cx="44" cy="34" rx="7" ry="3.4" transform="rotate(-35 44 34)"/><ellipse cx="52" cy="44" rx="7" ry="3.4" transform="rotate(15 52 44)"/><ellipse cx="66" cy="24" rx="7" ry="3.4" transform="rotate(-40 66 24)"/><ellipse cx="74" cy="32" rx="7" ry="3.4" transform="rotate(10 74 32)"/><ellipse cx="88" cy="12" rx="6" ry="3" transform="rotate(-45 88 12)"/></g></svg>
+        </div>
+
+        <button class="feature" type="button" aria-label="View recipe: Shakshuka">
+          <span class="feature-text">
+            <span class="feature-kicker">Featured recipe</span>
+            <span class="feature-title" style="display:block">Shakshuka</span>
+            <span class="feature-meta" style="display:block">Egyptian · Vegetarian</span>
+          </span>
+          <span class="feature-go" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div class="band" id="cookbook">
+    <section class="section" aria-labelledby="shelf-heading">
+      <div class="section-head reveal">
+        <div>
+          <span class="eyebrow" style="margin-bottom:.5rem">From your cookbook</span>
+          <h2 id="shelf-heading">Ready to cook</h2>
+        </div>
+        <div class="chips" role="toolbar" aria-label="Browse by category">
+          <button class="chip" type="button">Artisanal Pastas</button>
+          <button class="chip" type="button">Grain Bowls</button>
+          <button class="chip" type="button">Gourmet Mains</button>
+          <button class="chip" type="button">Breakfast &amp; Pastries</button>
+          <button class="chip" type="button">Seasonal Desserts</button>
+        </div>
+      </div>
+      <div class="grid">
+        <a class="card reveal" style="--i:0" href="#">
+          <div class="card-img"><img loading="lazy" src="https://www.themealdb.com/images/media/meals/xxpqsy1511452222.jpg" alt="Photograph of Matar Paneer" /><span class="card-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></div>
+          <div class="card-body"><span class="card-cat">Gourmet Mains</span><h3 class="card-title">Matar Paneer</h3><p class="card-meta">India</p></div>
+        </a>
+        <a class="card reveal" style="--i:1" href="#">
+          <div class="card-img"><img loading="lazy" src="https://www.themealdb.com/images/media/meals/wspuvp1511303478.jpg" alt="Photograph of Spinach and Ricotta Cannelloni" /><span class="card-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></div>
+          <div class="card-body"><span class="card-cat">Artisanal Pastas</span><h3 class="card-title">Spinach &amp; Ricotta Cannelloni</h3><p class="card-meta">Italian</p></div>
+        </a>
+        <a class="card reveal" style="--i:2" href="#">
+          <div class="card-img"><img loading="lazy" src="https://www.themealdb.com/images/media/meals/ssyqwr1511451678.jpg" alt="Photograph of Mushroom and Chestnut Rotolo" /><span class="card-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></div>
+          <div class="card-body"><span class="card-cat">Artisanal Pastas</span><h3 class="card-title">Mushroom &amp; Chestnut Rotolo</h3><p class="card-meta">British</p></div>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <section class="section" id="discover" aria-labelledby="disc-heading">
+    <div class="reveal">
+      <span class="eyebrow" style="margin-bottom:.5rem">Discover</span>
+      <h2 id="disc-heading">Search the world's kitchens</h2>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // One-shot hero entrance
+  requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add('ready'); }); });
+
+  // Scroll reveals — fire once per element
+  var items = document.querySelectorAll('.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    items.forEach(function (el) { el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+  }
+
+  if (reduced) return;
+
+  // Drift: ingredients move gently with pointer (fine pointers only) and scroll.
+  // Event-driven only — nothing animates on its own.
+  var stage = document.getElementById('stage');
+  var media = document.getElementById('hero-media');
+  var frame = document.getElementById('hero-frame');
+  var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var ticking = false;
+  var mx = 0, my = 0;
+
+  var render = function () {
+    var p = Math.min(Math.max(window.scrollY / (stage.offsetHeight || 1), 0), 1);
+    media.style.setProperty('--sy', p.toFixed(3));
+    media.style.setProperty('--mx', mx.toFixed(3));
+    media.style.setProperty('--my', my.toFixed(3));
+    frame.style.setProperty('--parallax', (1.04 + p * 0.06).toFixed(4));
+    ticking = false;
+  };
+  var queue = function () { if (!ticking) { ticking = true; requestAnimationFrame(render); } };
+
+  window.addEventListener('scroll', queue, { passive: true });
+  if (finePointer) {
+    stage.addEventListener('pointermove', function (e) {
+      var r = stage.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      my = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      queue();
+    });
+    stage.addEventListener('pointerleave', function () { mx = 0; my = 0; queue(); });
+  }
+  queue();
+})();
+</script>
+</body>
+</html>
