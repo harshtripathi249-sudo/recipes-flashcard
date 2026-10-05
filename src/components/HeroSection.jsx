@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import RecipePhoto from './RecipePhoto';
+import { INITIAL_RECIPES } from '../data/initialRecipes';
 
 const BROWSE_CATEGORIES = [
   { id: 'All', label: 'All recipes' },
@@ -120,14 +121,53 @@ export default function HeroSection({
   const figureRef = useRef(null);
   const [photoReady, setPhotoReady] = useState(false);
 
+  // 4 Featured dishes for the contained food-image animation using existing assets
+  const dishes = React.useMemo(() => {
+    const list = [
+      featuredRecipe,
+      ...(previewRecipes || []).filter((r) => r.id !== featuredRecipe?.id),
+      ...INITIAL_RECIPES.filter((r) => r.id !== featuredRecipe?.id)
+    ].filter(Boolean);
+
+    const unique = [];
+    const seen = new Set();
+    for (const r of list) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        unique.push(r);
+        if (unique.length === 4) break;
+      }
+    }
+    return unique.length > 0 ? unique : [featuredRecipe];
+  }, [featuredRecipe, previewRecipes]);
+
+  const [activeDishIndex, setActiveDishIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Auto-advance through the 4 dishes smoothly, respecting reduced-motion preferences
+  useEffect(() => {
+    if (dishes.length <= 1 || isPaused) return undefined;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return undefined;
+
+    const timer = setInterval(() => {
+      setActiveDishIndex((prev) => (prev + 1) % dishes.length);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [dishes.length, isPaused]);
+
+  const activeDish = dishes[activeDishIndex] || featuredRecipe;
+
   useScrollReveal(shelfRef, [previewRecipes.length]);
   useHeroDepth(figureRef);
 
   // Close-up details are cropped from the photo itself, so only show them once it has loaded.
   useEffect(() => {
-    const img = figureRef.current?.querySelector('img.hero-photo-img');
+    const img = figureRef.current?.querySelector('.hero-photo-slide.is-active img') || 
+                figureRef.current?.querySelector('img.hero-photo-img');
     if (img?.complete && img.naturalWidth > 0) setPhotoReady(true);
-  }, [featuredRecipe?.image]);
+  }, [activeDish?.image]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -140,8 +180,6 @@ export default function HeroSection({
     setActiveCategory(id);
     if (onCategorySelect) onCategorySelect(id);
   };
-
-  const featured = featuredRecipe;
 
   return (
     <>
@@ -183,27 +221,72 @@ export default function HeroSection({
             </div>
           </div>
 
-          {featured && (
-            <figure className="hero-figure" ref={figureRef}>
+          {activeDish && (
+            <figure 
+              className="hero-figure" 
+              ref={figureRef}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
               <div className="hero-photo-wrap">
                 <button
                   type="button"
                   className="hero-photo"
-                  onClick={onFeaturedClick}
-                  aria-label={`View recipe: ${featured.title}`}
+                  onClick={() => onFeaturedClick && onFeaturedClick(activeDish)}
+                  aria-label={`View recipe: ${activeDish.title}`}
                   id="hero-featured-recipe-btn"
                 >
-                  <RecipePhoto
-                    src={featured.image}
-                    alt={featured.alt}
-                    label={featured.title}
-                    className="hero-photo-img"
-                    eager
-                    fetchPriority="high"
-                    onLoad={() => setPhotoReady(true)}
-                  />
+                  <div className="hero-photo-slides">
+                    {dishes.map((dish, idx) => {
+                      const isActive = idx === activeDishIndex;
+                      return (
+                        <div
+                          key={dish.id || idx}
+                          className={`hero-photo-slide ${isActive ? 'is-active' : ''}`}
+                          aria-hidden={!isActive}
+                        >
+                          <RecipePhoto
+                            src={dish.image}
+                            alt={dish.alt || dish.title}
+                            label={dish.title}
+                            className="hero-photo-img"
+                            eager={idx === 0}
+                            fetchPriority={idx === 0 ? "high" : "auto"}
+                            onLoad={idx === 0 ? () => setPhotoReady(true) : undefined}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {dishes.length > 1 && (
+                    <div 
+                      className="hero-photo-indicators" 
+                      role="tablist" 
+                      aria-label="Featured dishes navigation"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {dishes.map((dish, idx) => (
+                        <button
+                          key={dish.id || idx}
+                          type="button"
+                          role="tab"
+                          aria-selected={idx === activeDishIndex}
+                          className={`hero-photo-dot ${idx === activeDishIndex ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setActiveDishIndex(idx);
+                          }}
+                          aria-label={`Show ${dish.title}`}
+                          title={dish.title}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </button>
-                {photoReady && featuredDetails.length > 0 && (
+
+                {photoReady && activeDishIndex === 0 && featuredDetails.length > 0 && (
                   <div className="hero-details" aria-hidden="true">
                     {featuredDetails.map((d, i) => (
                       <span
@@ -211,7 +294,7 @@ export default function HeroSection({
                         className={`hero-detail hero-detail-${d.id}`}
                         style={{
                           '--k': i,
-                          backgroundImage: `url("${featured.image}")`,
+                          backgroundImage: `url("${activeDish.image}")`,
                           backgroundSize: `${d.zoom * 100}%`,
                           backgroundPosition: `${focusPercent(d.x, d.zoom)}% ${focusPercent(d.y, d.zoom)}%`
                         }}
@@ -223,20 +306,24 @@ export default function HeroSection({
               <figcaption className="hero-caption">
                 <div className="hero-caption-text">
                   <span className="hero-caption-kicker">Featured recipe</span>
-                  <span className="hero-caption-title">{featured.title}</span>
+                  <span className="hero-caption-title">{activeDish.title}</span>
                   <span className="hero-caption-meta">
-                    {[featured.cuisine, featured.mealDbCategory].filter(Boolean).join(' · ')}
+                    {[activeDish.cuisine, activeDish.mealDbCategory || activeDish.category].filter(Boolean).join(' · ')}
                   </span>
                 </div>
-                <button type="button" className="hero-caption-link" onClick={onFeaturedClick}>
+                <button 
+                  type="button" 
+                  className="hero-caption-link" 
+                  onClick={() => onFeaturedClick && onFeaturedClick(activeDish)}
+                >
                   <span>View recipe</span>
                   <ArrowIcon size={16} />
                 </button>
               </figcaption>
-              {featured.mealDbUrl && (
+              {activeDish.mealDbUrl && (
                 <p className="hero-credit">
                   Recipe and photo:{' '}
-                  <a href={featured.mealDbUrl} target="_blank" rel="noopener noreferrer">TheMealDB</a>
+                  <a href={activeDish.mealDbUrl} target="_blank" rel="noopener noreferrer">TheMealDB</a>
                 </p>
               )}
             </figure>

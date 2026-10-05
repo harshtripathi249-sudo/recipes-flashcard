@@ -342,10 +342,11 @@ export default function App() {
         onAddRecipe={() => setActiveModal({ type: 'create' })}
         featuredRecipe={FEATURED_RECIPE}
         featuredDetails={FEATURED_DETAILS}
-        onFeaturedClick={() => {
-          // Open the saved copy if the user has one, otherwise the sourced original
-          const featured = recipes.find((r) => r.id === FEATURED_RECIPE_ID) || FEATURED_RECIPE;
-          setActiveModal({ type: 'view', recipe: featured });
+        onFeaturedClick={(dish) => {
+          // Open the clicked/featured recipe (fallback to primary featured)
+          const targetId = dish?.id || FEATURED_RECIPE_ID;
+          const target = recipes.find((r) => r.id === targetId) || dish || FEATURED_RECIPE;
+          setActiveModal({ type: 'view', recipe: target });
         }}
         onViewRecipe={(recipe) => setActiveModal({ type: 'view', recipe })}
         onCategorySelect={handleHeroCategorySelect}
