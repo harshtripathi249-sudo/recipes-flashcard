@@ -13,12 +13,13 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+  apiKey: "AIzaSyCkqMAdX0hhz-0AiBowQ-ykU6WpzLVhU38",
+  authDomain: "skillspring-5892d.firebaseapp.com",
+  projectId: "skillspring-5892d",
+  storageBucket: "skillspring-5892d.firebasestorage.app",
+  messagingSenderId: "556699112924",
+  appId: "1:556699112924:web:f444b97e0f5d27e73ceb19",
+  measurementId: "G-MBQ9GQLG47"
 };
 
 // Check if valid configuration is provided (not empty and not the default placeholder)

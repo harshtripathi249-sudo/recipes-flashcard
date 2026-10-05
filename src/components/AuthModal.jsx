@@ -6,6 +6,7 @@ import {
   signOut 
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
+import { validateEmail, getFirebaseAuthErrorMessage } from '../lib/validation';
 
 export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -13,8 +14,48 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState(null);
 
   if (!isOpen) return null;
+
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || '';
+  const firebaseConsoleAuthUrl = firebaseProjectId 
+    ? `https://console.firebase.google.com/project/${firebaseProjectId}/authentication/settings`
+    : 'https://console.firebase.google.com';
+
+  // Granular email validation
+  const emailValidation = validateEmail(email);
+  const isEmailEmpty = !email.trim();
+  const hasEmailError = (emailTouched || attemptedSubmit) && !emailValidation.isValid;
+  const emailErrorText = isEmailEmpty ? 'Email address cannot be empty.' : emailValidation.error;
+  const showEmailSuccess = email.trim().length > 0 && emailValidation.isValid;
+
+  // Password validation
+  const isPasswordEmpty = !password.trim();
+  const isPasswordTooShort = isSignUp && password.length > 0 && password.length < 6;
+  const hasPasswordError = (passwordTouched || attemptedSubmit) && (isPasswordEmpty || isPasswordTooShort);
+  const passwordErrorText = isPasswordEmpty 
+    ? 'Password is required.' 
+    : isPasswordTooShort 
+      ? 'Password must be at least 6 characters long.' 
+      : null;
+
+  const handleCopyDomain = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentHostname);
+        setCopiedDomain(true);
+        setTimeout(() => setCopiedDomain(false), 2500);
+      }
+    } catch (copyErr) {
+      console.warn('[AuthModal] Could not copy domain to clipboard:', copyErr);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth || !googleProvider) {
@@ -22,13 +63,23 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
       return;
     }
     setError(null);
+    setUnauthorizedDomain(null);
     setLoading(true);
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (onAuthSuccess) onAuthSuccess(result.user);
       onClose();
     } catch (err) {
-      setError(err.message || 'Google Sign-In failed.');
+      console.warn('[AuthModal] Google Sign-In error:', err);
+      const parsed = getFirebaseAuthErrorMessage(err, currentHostname);
+      if (parsed.isUnauthorizedDomain) {
+        setUnauthorizedDomain({
+          hostname: currentHostname,
+          projectId: firebaseProjectId
+        });
+      }
+      setError(parsed.message);
     } finally {
       setLoading(false);
     }
@@ -36,17 +87,42 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
+    setAttemptedSubmit(true);
+    setEmailTouched(true);
+    setPasswordTouched(true);
+
     if (!isFirebaseConfigured || !auth) {
       setError('Firebase is not yet configured with valid credentials in your environment.');
       return;
     }
-    if (!email.trim() || !password.trim()) {
-      setError('Please provide both email and password.');
+
+    // Exact email pre-validation
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      setError(emailCheck.error);
+      const emailInput = document.getElementById('auth-email');
+      if (emailInput) emailInput.focus();
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('Please provide your password.');
+      const passInput = document.getElementById('auth-password');
+      if (passInput) passInput.focus();
+      return;
+    }
+
+    if (isSignUp && password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      const passInput = document.getElementById('auth-password');
+      if (passInput) passInput.focus();
       return;
     }
 
     setError(null);
+    setUnauthorizedDomain(null);
     setLoading(true);
+
     try {
       let result;
       if (isSignUp) {
@@ -57,15 +133,15 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
       if (onAuthSuccess) onAuthSuccess(result.user);
       onClose();
     } catch (err) {
-      let msg = err.message || 'Authentication failed.';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        msg = 'Invalid email or password.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        msg = 'This email is already registered. Please sign in instead.';
-      } else if (err.code === 'auth/weak-password') {
-        msg = 'Password should be at least 6 characters.';
+      console.warn('[AuthModal] Email Auth error:', err);
+      const parsed = getFirebaseAuthErrorMessage(err, currentHostname);
+      if (parsed.isUnauthorizedDomain) {
+        setUnauthorizedDomain({
+          hostname: currentHostname,
+          projectId: firebaseProjectId
+        });
       }
-      setError(msg);
+      setError(parsed.message);
     } finally {
       setLoading(false);
     }
@@ -79,10 +155,20 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
       if (onAuthSuccess) onAuthSuccess(null);
       onClose();
     } catch (err) {
-      setError('Failed to sign out.');
+      console.error('[AuthModal] Sign out error:', err);
+      setError('Failed to sign out. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setError(null);
+    setUnauthorizedDomain(null);
+    setAttemptedSubmit(false);
+    setEmailTouched(false);
+    setPasswordTouched(false);
   };
 
   return (
@@ -147,8 +233,76 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
             </div>
           ) : (
             <>
-              {error && (
+              {/* Specialized Unauthorized Domain Troubleshooting Banner */}
+              {unauthorizedDomain && (
+                <div className="auth-domain-banner" role="alert">
+                  <div className="auth-domain-header">
+                    <span className="auth-domain-icon" aria-hidden="true">🌐</span>
+                    <div className="auth-domain-title-group">
+                      <strong className="auth-domain-title">Domain Authorization Required</strong>
+                      <p className="auth-domain-desc">
+                        Firebase blocks authentication from domains that are not in your project&apos;s authorized whitelist.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="auth-domain-card">
+                    <div className="auth-domain-copy-strip">
+                      <span className="auth-domain-label">Current Domain:</span>
+                      <code className="auth-domain-pill">{unauthorizedDomain.hostname}</code>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary copy-domain-btn"
+                        onClick={handleCopyDomain}
+                        title="Copy domain to clipboard"
+                      >
+                        {copiedDomain ? '✓ Copied' : 'Copy Domain'}
+                      </button>
+                    </div>
+
+                    <div className="auth-domain-steps">
+                      <strong>How to fix in 3 quick steps:</strong>
+                      <ol>
+                        <li>
+                          Open Firebase Console:{' '}
+                          <a 
+                            href={firebaseConsoleAuthUrl}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="auth-link-highlight"
+                          >
+                            Settings &gt; Authorized domains ↗
+                          </a>
+                        </li>
+                        <li>
+                          Under <strong>Authorized domains</strong>, click <strong>Add domain</strong>.
+                        </li>
+                        <li>
+                          Paste <code className="inline-code">{unauthorizedDomain.hostname}</code> and click <strong>Save</strong>.
+                        </li>
+                      </ol>
+                    </div>
+
+                    {unauthorizedDomain.hostname === '127.0.0.1' && (
+                      <div className="auth-domain-quick-tip">
+                        💡 <strong>Quick Alternative:</strong> Access the app via{' '}
+                        <a 
+                          href="http://localhost:5173" 
+                          className="auth-link-highlight"
+                        >
+                          http://localhost:5173
+                        </a>{' '}
+                        instead of 127.0.0.1 (Firebase authorizes localhost by default).
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* General Error Banner (when not unauthorized domain) */}
+              {error && !unauthorizedDomain && (
                 <div className="auth-error-banner" role="alert">
+                  <span className="auth-error-icon">⚠️</span>
                   <span>{error}</span>
                 </div>
               )}
@@ -161,7 +315,7 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
                     onClick={handleGoogleSignIn}
                     disabled={loading}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
@@ -174,31 +328,128 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
                     <span>or continue with email</span>
                   </div>
 
-                  <form onSubmit={handleEmailAuth} className="auth-email-form">
-                    <div className="form-group">
-                      <label htmlFor="auth-email">Email Address</label>
-                      <input 
-                        type="email" 
-                        id="auth-email" 
-                        className="form-input" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="chef@savoria.kitchen"
-                        required 
-                      />
+                  <form onSubmit={handleEmailAuth} className="auth-email-form" noValidate>
+                    {/* Granular Email Validation Field */}
+                    <div className="form-group email-form-group">
+                      <div className="form-label-row">
+                        <label htmlFor="auth-email" className="form-label">
+                          Email Address <span className="label-required">*</span>
+                        </label>
+                        {showEmailSuccess && (
+                          <span className="email-status-pill success" aria-live="polite">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Valid format
+                          </span>
+                        )}
+                        {hasEmailError && (
+                          <span className="email-status-pill error" aria-live="polite">
+                            Invalid format
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="input-with-feedback">
+                        <input 
+                          type="email" 
+                          id="auth-email" 
+                          className={`form-input ${
+                            hasEmailError 
+                              ? 'is-invalid' 
+                              : showEmailSuccess 
+                                ? 'is-valid' 
+                                : ''
+                          }`} 
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (error) setError(null);
+                            if (unauthorizedDomain) setUnauthorizedDomain(null);
+                          }}
+                          onBlur={() => {
+                            if (email.trim().length > 0) {
+                              setEmailTouched(true);
+                            }
+                          }}
+                          placeholder="chef@savoria.kitchen"
+                          autoComplete="email"
+                          aria-invalid={hasEmailError}
+                          aria-describedby={hasEmailError ? 'auth-email-error-msg' : undefined}
+                          required 
+                        />
+                        {showEmailSuccess && (
+                          <span className="input-state-badge success" title="Valid email format">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Exact, detailed error explanation when invalid */}
+                      {hasEmailError && (
+                        <div 
+                          id="auth-email-error-msg" 
+                          className="form-error-msg email-error-feedback" 
+                          role="alert"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                          </svg>
+                          <span>{emailErrorText}</span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="form-group">
-                      <label htmlFor="auth-password">Password</label>
-                      <input 
-                        type="password" 
-                        id="auth-password" 
-                        className="form-input" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required 
-                      />
+                    {/* Password Field */}
+                    <div className="form-group password-form-group">
+                      <div className="form-label-row">
+                        <label htmlFor="auth-password" className="form-label">
+                          Password <span className="label-required">*</span>
+                        </label>
+                        {isSignUp && (
+                          <span className="form-hint-pill">Min. 6 chars</span>
+                        )}
+                      </div>
+
+                      <div className="input-with-feedback">
+                        <input 
+                          type="password" 
+                          id="auth-password" 
+                          className={`form-input ${hasPasswordError ? 'is-invalid' : ''}`} 
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (error) setError(null);
+                          }}
+                          onBlur={() => {
+                            if (password.length > 0) {
+                              setPasswordTouched(true);
+                            }
+                          }}
+                          placeholder="••••••••"
+                          autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                          aria-invalid={hasPasswordError}
+                          aria-describedby={hasPasswordError ? 'auth-password-error-msg' : undefined}
+                          required 
+                        />
+                      </div>
+
+                      {hasPasswordError && (
+                        <div 
+                          id="auth-password-error-msg" 
+                          className="form-error-msg password-error-feedback" 
+                          role="alert"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                          </svg>
+                          <span>{passwordErrorText}</span>
+                        </div>
+                      )}
                     </div>
 
                     <button 
@@ -215,10 +466,7 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess 
                     <button 
                       type="button" 
                       className="btn-link"
-                      onClick={() => {
-                        setIsSignUp(!isSignUp);
-                        setError(null);
-                      }}
+                      onClick={handleToggleMode}
                     >
                       {isSignUp ? 'Sign In' : 'Create One'}
                     </button>
